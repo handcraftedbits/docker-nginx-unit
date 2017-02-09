@@ -85,26 +85,8 @@ function normalizeSlashesSingleSlashToEmpty () {
      fi
 }
 
-function notifyUnitLaunched () {
-     local launchedDir=/etc/nginx/host/units/__launched__
-
-     if [ ! -d ${launchedDir} ]
-     then
-          mkdir -p ${launchedDir}
-     fi
-
-     touch ${launchedDir}/`randomInt`
-}
-
 function notifyUnitStarted () {
-     local startedDir=/etc/nginx/host/units/__started__
-
-     if [ ! -d ${startedDir} ]
-     then
-          mkdir -p ${startedDir}
-     fi
-
-     touch ${startedDir}/`randomInt`
+     touch /tmp/unitStarted
 }
 
 function optionalVariable () {
