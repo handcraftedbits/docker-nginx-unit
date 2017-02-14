@@ -4,4 +4,4 @@ MAINTAINER HandcraftedBits <opensource@handcraftedbits.com>
 COPY data /
 
 RUN apk update && \
-  apk add netcat-openbsd
+  apk add bash netcat-openbsd
