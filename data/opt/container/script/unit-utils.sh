@@ -1,16 +1,18 @@
 #!/bin/bash
 
+units_dir=/opt/container/shared/etc/nginx/host/units
+
 function checkCommonRequiredVariables () {
      requiredVariable NGINX_UNIT_HOSTS
      optionalVariable NGINX_URL_PREFIX "/"
 }
 
 function copyUnitConf () {
-     local filename=/etc/nginx/host/units/${NGINX_UNIT_HOSTS}/${1}-`randomInt`.conf
+     local filename=${units_dir}/${NGINX_UNIT_HOSTS}/${1}-`hostname`.conf
 
-     if [ ! -d /etc/nginx/host/units/${NGINX_UNIT_HOSTS} ]
+     if [ ! -d ${units_dir}/${NGINX_UNIT_HOSTS} ]
      then
-          mkdir -p /etc/nginx/host/units/${NGINX_UNIT_HOSTS}
+          mkdir -p ${units_dir}/${NGINX_UNIT_HOSTS}
      fi
 
      # Add randomness to the unit configuration file name in case two of the same units are used at the same time.
@@ -85,8 +87,22 @@ function normalizeSlashesSingleSlashToEmpty () {
      fi
 }
 
+function notifyUnitLaunched () {
+     mkdir -p ${units_dir}/__launched__
+
+     touch ${units_dir}/__launched__/`hostname`
+}
+
 function notifyUnitStarted () {
-     touch /tmp/unitStarted
+     nc -l 1234 > /dev/null
+}
+
+function onProcessStopped () {
+     rm -f ${2}
+
+     kill -TERM ${1}
+
+     wait ${1}
 }
 
 function optionalVariable () {
@@ -109,4 +125,23 @@ function requiredVariable () {
 
           exit 1
      fi
+}
+
+# Start the process and get the PID so we can trap the stop/kill signals and clean up before actually killing the
+# underlying process.
+
+startProcessWithTrap () {
+     func=${1}
+     unitFile=${2}
+
+     shift
+     shift
+
+     $@ &
+
+     pid=$!
+
+     trap "${func} ${pid} ${unitFile}" INT KILL TERM
+
+     wait ${pid}
 }
