@@ -8,7 +8,7 @@ function checkCommonRequiredVariables () {
 }
 
 function copyUnitConf () {
-     local filename=${units_dir}/${NGINX_UNIT_HOSTS}/${1}-`hostname`.conf
+     local unit_conf=${units_dir}/${NGINX_UNIT_HOSTS}/${1}-`hostname`.conf
 
      if [ ! -d ${units_dir}/${NGINX_UNIT_HOSTS} ]
      then
@@ -17,24 +17,24 @@ function copyUnitConf () {
 
      # Add randomness to the unit configuration file name in case two of the same units are used at the same time.
 
-     cp /opt/container/template/${1}.conf.template ${filename}
+     cp /opt/container/template/${1}.conf.template ${unit_conf}
 
      # Perform substitutions for variables common to all units.
 
-     fileSubstitute ${filename} NGINX_PROXY_HOST `hostname`
-     fileSubstitute ${filename} NGINX_URL_PREFIX `normalizeSlashes "/${NGINX_URL_PREFIX}/"`
-     fileSubstitute ${filename} unit_conf ${filename}
+     fileSubstitute ${unit_conf} NGINX_PROXY_HOST `hostname`
+     fileSubstitute ${unit_conf} NGINX_URL_PREFIX `normalizeSlashes "/${NGINX_URL_PREFIX}/"`
+     fileSubstitute ${unit_conf} unit_conf ${unit_conf}
 
      # Perform appropriate substitutions if there's a user-provided set of directives to use.
 
      if [ -f /etc/nginx/extra/unit.extra.conf ]
      then
-          cp /etc/nginx/extra/unit.extra.conf ${filename}.extra
+          cp /etc/nginx/extra/unit.extra.conf ${unit_conf}.extra
 
-          sed -i "s/#include/include/g" ${filename}
+          sed -i "s/#include/include/g" ${unit_conf}
      fi
 
-     echo ${filename}
+     echo ${unit_conf}
 }
 
 function fileSubstitute () {
@@ -97,14 +97,6 @@ function notifyUnitStarted () {
      nc -l 1234 > /dev/null
 }
 
-function onProcessStopped () {
-     rm -f ${2}
-
-     kill -TERM ${1}
-
-     wait ${1}
-}
-
 function optionalVariable () {
      if [ -z "${!1}" ]
      then
@@ -114,10 +106,6 @@ function optionalVariable () {
      fi
 }
 
-function randomInt () {
-     od -vAn -N4 -tu4 < /dev/urandom | tr -d "[[:space:]]"
-}
-
 function requiredVariable () {
      if [ -z "${!1}" ]
      then
@@ -125,23 +113,4 @@ function requiredVariable () {
 
           exit 1
      fi
-}
-
-# Start the process and get the PID so we can trap the stop/kill signals and clean up before actually killing the
-# underlying process.
-
-startProcessWithTrap () {
-     func=${1}
-     unitFile=${2}
-
-     shift
-     shift
-
-     $@ &
-
-     pid=$!
-
-     trap "${func} ${pid} ${unitFile}" INT KILL TERM
-
-     wait ${pid}
 }
